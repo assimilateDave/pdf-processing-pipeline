@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Processing - PDF Processing Pipeline{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>Batch Processing</h1>
+        <p class="text-muted">Process multiple PDF files at once</p>
+    </div>
+</div>
+
+<!-- Batch Processing Form -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-collection"></i> Process Directory</h5>
+            </div>
+            <div class="card-body">
+                <form id="batch-form">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="directory-path" class="form-label">Directory Path</label>
+                                <input type="text" class="form-control" id="directory-path" 
+                                       placeholder="Enter path to directory containing PDF files" 
+                                       value="data/input">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="recursive" checked>
+                                    <label class="form-check-label" for="recursive">
+                                        Include subdirectories
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-play-circle"></i> Start Batch Processing
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="scan-directory">
+                                <i class="bi bi-search"></i> Scan Directory
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Directory Scan Results -->
+<div class="row mb-4" id="scan-results" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-files"></i> Found PDF Files</h5>
+            </div>
+            <div class="card-body">
+                <div id="scan-results-content"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Progress -->
+<div class="row mb-4" id="processing-progress" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock"></i> Processing Progress</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Overall Progress</span>
+                        <span id="progress-text">0 / 0</span>
+                    </div>
+                    <div class="progress">
+                        <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div id="current-file" class="mb-3">
+                    <strong>Current file:</strong> <span id="current-file-name">-</span>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 id="successful-count" class="text-success">0</h4>
+                            <small class="text-muted">Successful</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 id="failed-count" class="text-danger">0</h4>
+                            <small class="text-muted">Failed</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 id="remaining-count" class="text-info">0</h4>
+                            <small class="text-muted">Remaining</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 id="total-count" class="text-primary">0</h4>
+                            <small class="text-muted">Total</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Results -->
+<div class="row" id="processing-results" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-check-circle"></i> Processing Results</h5>
+            </div>
+            <div class="card-body">
+                <div id="results-summary" class="mb-3"></div>
+                
+                <div id="error-details" style="display: none;">
+                    <h6>Failed Files:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>File</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody id="error-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Process Sample Files</h6>
+                        <p class="text-muted">Process files in the default input directory.</p>
+                        <button class="btn btn-outline-primary" onclick="processDefaultDirectory()">
+                            <i class="bi bi-folder"></i> Process Input Directory
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>View Processing Logs</h6>
+                        <p class="text-muted">Check the status of all processed files.</p>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-info">
+                            <i class="bi bi-list"></i> View Dashboard
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Search Processed Documents</h6>
+                        <p class="text-muted">Browse and search processed documents.</p>
+                        <a href="{{ url_for('documents') }}" class="btn btn-outline-success">
+                            <i class="bi bi-search"></i> Search Documents
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let isProcessing = false;
+let processedCount = 0;
+let totalFiles = 0;
+
+$(document).ready(function() {
+    $('#batch-form').submit(function(e) {
+        e.preventDefault();
+        startBatchProcessing();
+    });
+    
+    $('#scan-directory').click(function() {
+        scanDirectory();
+    });
+});
+
+function scanDirectory() {
+    let directoryPath = $('#directory-path').val().trim();
+    
+    if (!directoryPath) {
+        alert('Please enter a directory path');
+        return;
+    }
+    
+    $('#scan-directory').prop('disabled', true);
+    
+    // Simulate directory scan (in real implementation, this would be an API call)
+    setTimeout(function() {
+        // Mock scan results
+        let mockFiles = [
+            'document1.pdf',
+            'invoice_2024.pdf', 
+            'contract_agreement.pdf',
+            'technical_manual.pdf',
+            'financial_report.pdf'
+        ];
+        
+        displayScanResults(mockFiles);
+        $('#scan-directory').prop('disabled', false);
+    }, 1000);
+}
+
+function displayScanResults(files) {
+    let html = `
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Found ${files.length} PDF files
+        </div>
+        <div class="row">
+    `;
+    
+    files.forEach(function(file, index) {
+        html += `
+            <div class="col-md-4 mb-2">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                    <span>${file}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    $('#scan-results-content').html(html);
+    $('#scan-results').show();
+}
+
+function startBatchProcessing() {
+    if (isProcessing) {
+        alert('Batch processing is already running');
+        return;
+    }
+    
+    let directoryPath = $('#directory-path').val().trim();
+    let recursive = $('#recursive').is(':checked');
+    
+    if (!directoryPath) {
+        alert('Please enter a directory path');
+        return;
+    }
+    
+    isProcessing = true;
+    processedCount = 0;
+    
+    // Show progress section
+    $('#processing-progress').show();
+    $('#processing-results').hide();
+    
+    // Disable form
+    $('#batch-form input, #batch-form button').prop('disabled', true);
+    
+    // Start processing
+    $.ajax({
+        url: '/api/batch-process',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            directory_path: directoryPath,
+            recursive: recursive
+        }),
+        success: function(response) {
+            handleBatchResults(response);
+        },
+        error: function() {
+            handleBatchResults({
+                success: false,
+                error: 'Batch processing request failed'
+            });
+        },
+        complete: function() {
+            isProcessing = false;
+            $('#batch-form input, #batch-form button').prop('disabled', false);
+        }
+    });
+    
+    // Simulate real-time progress updates
+    simulateProgress();
+}
+
+function simulateProgress() {
+    // This simulates real-time progress updates
+    // In a real implementation, this would use WebSocket or polling
+    
+    totalFiles = 5; // Mock total
+    let interval = setInterval(function() {
+        if (!isProcessing) {
+            clearInterval(interval);
+            return;
+        }
+        
+        processedCount++;
+        updateProgress();
+        
+        if (processedCount >= totalFiles) {
+            clearInterval(interval);
+        }
+    }, 2000);
+}
+
+function updateProgress() {
+    let progress = totalFiles > 0 ? (processedCount / totalFiles) * 100 : 0;
+    
+    $('#progress-bar').css('width', progress + '%');
+    $('#progress-text').text(`${processedCount} / ${totalFiles}`);
+    $('#current-file-name').text(`file_${processedCount}.pdf`);
+    
+    $('#successful-count').text(Math.floor(processedCount * 0.8));
+    $('#failed-count').text(Math.floor(processedCount * 0.2));
+    $('#remaining-count').text(totalFiles - processedCount);
+    $('#total-count').text(totalFiles);
+}
+
+function handleBatchResults(response) {
+    if (response.success) {
+        displayBatchResults(response.results);
+    } else {
+        displayBatchError(response.error);
+    }
+    
+    $('#processing-results').show();
+}
+
+function displayBatchResults(results) {
+    let successRate = results.total_files > 0 ? 
+        (results.successful / results.total_files * 100).toFixed(1) : 0;
+    
+    let summaryClass = results.failed > 0 ? 'alert-warning' : 'alert-success';
+    
+    let html = `
+        <div class="alert ${summaryClass}">
+            <h6><i class="bi bi-check-circle"></i> Batch Processing Completed</h6>
+            <ul class="mb-0">
+                <li>Total files: ${results.total_files}</li>
+                <li>Successful: ${results.successful}</li>
+                <li>Failed: ${results.failed}</li>
+                <li>Success rate: ${successRate}%</li>
+            </ul>
+        </div>
+    `;
+    
+    $('#results-summary').html(html);
+    
+    // Show error details if there are failures
+    if (results.failed > 0 && results.errors) {
+        let errorTableHtml = '';
+        results.errors.forEach(function(error) {
+            errorTableHtml += `
+                <tr>
+                    <td>${error.file}</td>
+                    <td class="text-danger">${error.error}</td>
+                </tr>
+            `;
+        });
+        
+        $('#error-table-body').html(errorTableHtml);
+        $('#error-details').show();
+    }
+}
+
+function displayBatchError(error) {
+    let html = `
+        <div class="alert alert-danger">
+            <h6><i class="bi bi-x-circle"></i> Batch Processing Failed</h6>
+            <p class="mb-0">Error: ${error}</p>
+        </div>
+    `;
+    
+    $('#results-summary').html(html);
+}
+
+function processDefaultDirectory() {
+    $('#directory-path').val('data/input');
+    $('#recursive').prop('checked', true);
+    startBatchProcessing();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PDF Processing Pipeline{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>PDF Processing Pipeline Dashboard</h1>
+        <p class="text-muted">Monitor and manage your PDF processing workflow</p>
+    </div>
+</div>
+
+<!-- Control Panel -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-toggles"></i> Control Panel</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <button id="start-monitoring" class="btn btn-success me-2" {% if is_monitoring %}disabled{% endif %}>
+                            <i class="bi bi-play"></i> Start Monitoring
+                        </button>
+                        <button id="stop-monitoring" class="btn btn-danger me-2" {% if not is_monitoring %}disabled{% endif %}>
+                            <i class="bi bi-stop"></i> Stop Monitoring
+                        </button>
+                        <button id="test-components" class="btn btn-info">
+                            <i class="bi bi-check-circle"></i> Test Components
+                        </button>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button id="refresh-dashboard" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">Total Processed</h5>
+                <h2 class="display-6">{{ processing_stats.total }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">Successful</h5>
+                <h2 class="display-6">{{ processing_stats.completed }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-danger">Failed</h5>
+                <h2 class="display-6">{{ processing_stats.failed }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">Success Rate</h5>
+                <h2 class="display-6">{{ "%.1f"|format(processing_stats.success_rate) }}%</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-activity"></i> System Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for component, status in system_status.components.items() %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            {% if status.available or status.connected %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            {% else %}
+                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                            {% endif %}
+                            <div>
+                                <strong>{{ component.replace('_', ' ').title() }}</strong>
+                                {% if status.error %}
+                                    <br><small class="text-muted">{{ status.error }}</small>
+                                {% elif status.description %}
+                                    <br><small class="text-muted">{{ status.description }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Processing Logs -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-list-ul"></i> Recent Processing Logs</h5>
+                <a href="#" class="btn btn-sm btn-outline-primary" onclick="loadLogs()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Status</th>
+                                <th>Stage</th>
+                                <th>Type</th>
+                                <th>Classification</th>
+                                <th>Processing Time</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body">
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-file-earmark-pdf me-1"></i>
+                                    {{ log.filename }}
+                                </td>
+                                <td>
+                                    {% if log.status == 'completed' %}
+                                        <span class="badge bg-success">{{ log.status }}</span>
+                                    {% elif log.status == 'failed' %}
+                                        <span class="badge bg-danger">{{ log.status }}</span>
+                                    {% elif log.status == 'processing' %}
+                                        <span class="badge bg-warning">{{ log.status }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ log.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.stage or '-' }}</td>
+                                <td>{{ log.document_type or '-' }}</td>
+                                <td>{{ log.classification_result or '-' }}</td>
+                                <td>
+                                    {% if log.processing_time %}
+                                        {{ "%.2f"|format(log.processing_time) }}s
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Component Test Results -->
+<div class="modal fade" id="testResultsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Component Test Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="test-results-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Auto-refresh every 30 seconds
+    setInterval(function() {
+        refreshDashboard();
+    }, 30000);
+    
+    // Control buttons
+    $('#start-monitoring').click(function() {
+        startMonitoring();
+    });
+    
+    $('#stop-monitoring').click(function() {
+        stopMonitoring();
+    });
+    
+    $('#test-components').click(function() {
+        testComponents();
+    });
+    
+    $('#refresh-dashboard').click(function() {
+        refreshDashboard();
+    });
+});
+
+function startMonitoring() {
+    $.post('/api/start-monitoring')
+        .done(function(response) {
+            if (response.success) {
+                showAlert('success', 'File monitoring started successfully');
+                updateMonitoringStatus(true);
+            } else {
+                showAlert('danger', 'Failed to start monitoring: ' + response.error);
+            }
+        })
+        .fail(function() {
+            showAlert('danger', 'Failed to start monitoring');
+        });
+}
+
+function stopMonitoring() {
+    $.post('/api/stop-monitoring')
+        .done(function(response) {
+            if (response.success) {
+                showAlert('success', 'File monitoring stopped');
+                updateMonitoringStatus(false);
+            } else {
+                showAlert('danger', 'Failed to stop monitoring: ' + response.error);
+            }
+        })
+        .fail(function() {
+            showAlert('danger', 'Failed to stop monitoring');
+        });
+}
+
+function testComponents() {
+    $('#test-components').prop('disabled', true);
+    
+    $.get('/api/test-components')
+        .done(function(response) {
+            if (response.success) {
+                displayTestResults(response.test_results);
+                $('#testResultsModal').modal('show');
+            } else {
+                showAlert('danger', 'Failed to test components: ' + response.error);
+            }
+        })
+        .fail(function() {
+            showAlert('danger', 'Failed to test components');
+        })
+        .always(function() {
+            $('#test-components').prop('disabled', false);
+        });
+}
+
+function displayTestResults(results) {
+    let html = '<div class="row">';
+    
+    for (let component in results) {
+        let status = results[component];
+        let statusIcon = (status.available || status.connected) ? 
+            '<i class="bi bi-check-circle-fill text-success"></i>' : 
+            '<i class="bi bi-x-circle-fill text-danger"></i>';
+        
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">${statusIcon} ${component.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</h6>
+                        <div class="card-text">
+                            ${status.description || status.error || 'OK'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#test-results-content').html(html);
+}
+
+function refreshDashboard() {
+    location.reload();
+}
+
+function loadLogs() {
+    $.get('/api/logs?limit=10')
+        .done(function(response) {
+            if (response.success) {
+                updateLogsTable(response.logs);
+            }
+        });
+}
+
+function updateLogsTable(logs) {
+    let tbody = $('#logs-table-body');
+    tbody.empty();
+    
+    logs.forEach(function(log) {
+        let statusBadge = getStatusBadge(log.status);
+        let row = `
+            <tr>
+                <td><i class="bi bi-file-earmark-pdf me-1"></i>${log.filename}</td>
+                <td>${statusBadge}</td>
+                <td>${log.stage || '-'}</td>
+                <td>${log.document_type || '-'}</td>
+                <td>${log.classification_result || '-'}</td>
+                <td>${log.processing_time ? log.processing_time.toFixed(2) + 's' : '-'}</td>
+                <td>${new Date(log.created_at).toLocaleString()}</td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+function getStatusBadge(status) {
+    let badgeClass = 'secondary';
+    if (status === 'completed') badgeClass = 'success';
+    else if (status === 'failed') badgeClass = 'danger';
+    else if (status === 'processing') badgeClass = 'warning';
+    
+    return `<span class="badge bg-${badgeClass}">${status}</span>`;
+}
+
+function updateMonitoringStatus(isMonitoring) {
+    let status = $('#monitoring-status');
+    if (isMonitoring) {
+        status.removeClass('bg-secondary').addClass('bg-success');
+        status.html('<i class="bi bi-eye"></i> Monitoring');
+        $('#start-monitoring').prop('disabled', true);
+        $('#stop-monitoring').prop('disabled', false);
+    } else {
+        status.removeClass('bg-success').addClass('bg-secondary');
+        status.html('<i class="bi bi-eye-slash"></i> Not Monitoring');
+        $('#start-monitoring').prop('disabled', false);
+        $('#stop-monitoring').prop('disabled', true);
+    }
+}
+
+function showAlert(type, message) {
+    let alert = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('main .container').prepend(alert);
+}
+</script>
+{% endblock %}
