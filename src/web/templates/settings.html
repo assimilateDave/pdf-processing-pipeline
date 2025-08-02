@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - PDF Processing Pipeline{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>System Settings</h1>
+        <p class="text-muted">Configure the PDF processing pipeline</p>
+    </div>
+</div>
+
+<!-- Configuration Settings -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-folder"></i> Directory Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Watch Directory</label>
+                    <input type="text" class="form-control" value="{{ config.watch_directory }}" readonly>
+                    <small class="text-muted">Directory monitored for new PDF files</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-search"></i> Elasticsearch Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Elasticsearch URL</label>
+                    <input type="text" class="form-control" value="{{ config.elasticsearch_url }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Index Name</label>
+                    <input type="text" class="form-control" value="{{ config.elasticsearch_index }}" readonly>
+                </div>
+                <button class="btn btn-outline-primary" onclick="testElasticsearch()">
+                    <i class="bi bi-check-circle"></i> Test Connection
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-eye"></i> OCR Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Tesseract Command</label>
+                    <input type="text" class="form-control" value="{{ config.tesseract_cmd }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">OCR Languages</label>
+                    <input type="text" class="form-control" value="{{ config.ocr_languages }}" readonly>
+                    <small class="text-muted">Supported languages for OCR (e.g., eng, fra, deu)</small>
+                </div>
+                <button class="btn btn-outline-primary" onclick="testTesseract()">
+                    <i class="bi bi-check-circle"></i> Test Tesseract
+                </button>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-cpu"></i> Model Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Model Path</label>
+                    <input type="text" class="form-control" value="{{ config.model_path }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Vectorizer Path</label>
+                    <input type="text" class="form-control" value="{{ config.vectorizer_path }}" readonly>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Information -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-info-circle"></i> System Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Pipeline Components</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check text-success"></i> Format Detector</li>
+                            <li><i class="bi bi-check text-success"></i> Text Extractor (PDFMiner)</li>
+                            <li><i class="bi bi-check text-success"></i> OCR Processor (Tesseract)</li>
+                            <li><i class="bi bi-check text-success"></i> Document Classifier</li>
+                            <li><i class="bi bi-check text-success"></i> Elasticsearch Indexer</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Supported Formats</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-file-earmark-pdf text-danger"></i> PDF (machine-readable)</li>
+                            <li><i class="bi bi-file-earmark-pdf text-danger"></i> PDF (scanned/image-based)</li>
+                            <li><i class="bi bi-file-earmark-image text-primary"></i> TIFF files (via OCR)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Actions</h6>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" onclick="testAllComponents()">
+                                <i class="bi bi-check-all"></i> Test All Components
+                            </button>
+                            <button class="btn btn-outline-info" onclick="viewLogs()">
+                                <i class="bi bi-journal-text"></i> View System Logs
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="clearCache()">
+                                <i class="bi bi-trash"></i> Clear Cache
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Environment Variables Help -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-question-circle"></i> Configuration Help</h5>
+            </div>
+            <div class="card-body">
+                <h6>Environment Variables</h6>
+                <p>You can override these settings using environment variables:</p>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Variable</th>
+                                <th>Description</th>
+                                <th>Default</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>ELASTICSEARCH_URL</code></td>
+                                <td>Elasticsearch server URL</td>
+                                <td>http://localhost:9200</td>
+                            </tr>
+                            <tr>
+                                <td><code>ELASTICSEARCH_INDEX</code></td>
+                                <td>Elasticsearch index name</td>
+                                <td>pdf_documents</td>
+                            </tr>
+                            <tr>
+                                <td><code>TESSERACT_CMD</code></td>
+                                <td>Path to Tesseract executable</td>
+                                <td>tesseract</td>
+                            </tr>
+                            <tr>
+                                <td><code>OCR_LANGUAGES</code></td>
+                                <td>OCR language codes</td>
+                                <td>eng</td>
+                            </tr>
+                            <tr>
+                                <td><code>WATCH_DIRECTORY</code></td>
+                                <td>Directory to monitor for files</td>
+                                <td>data/input</td>
+                            </tr>
+                            <tr>
+                                <td><code>DATABASE_URL</code></td>
+                                <td>Database connection string</td>
+                                <td>sqlite:///pipeline.db</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <h6 class="mt-4">Deployment Notes</h6>
+                <ul>
+                    <li>For Windows deployment, ensure Tesseract is installed and accessible</li>
+                    <li>Elasticsearch must be running and accessible from the application</li>
+                    <li>The watch directory must have read/write permissions</li>
+                    <li>For production, use a proper database (PostgreSQL, MySQL) instead of SQLite</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Results Modal -->
+<div class="modal fade" id="testResultsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Component Test Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="test-results-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testElasticsearch() {
+    showLoading('Testing Elasticsearch connection...');
+    
+    $.get('/api/test-components')
+        .done(function(response) {
+            if (response.success) {
+                let esResult = response.test_results.elasticsearch;
+                if (esResult.connected) {
+                    showAlert('success', `Elasticsearch connected successfully (${esResult.cluster_name}, v${esResult.version})`);
+                } else {
+                    showAlert('danger', 'Elasticsearch connection failed: ' + esResult.error);
+                }
+            } else {
+                showAlert('danger', 'Failed to test Elasticsearch: ' + response.error);
+            }
+        })
+        .fail(function() {
+            showAlert('danger', 'Failed to test Elasticsearch connection');
+        });
+}
+
+function testTesseract() {
+    showLoading('Testing Tesseract installation...');
+    
+    $.get('/api/test-components')
+        .done(function(response) {
+            if (response.success) {
+                let ocrResult = response.test_results.ocr_processor;
+                if (ocrResult.success) {
+                    showAlert('success', `Tesseract working correctly (${ocrResult.version})`);
+                } else {
+                    showAlert('danger', 'Tesseract test failed: ' + ocrResult.error);
+                }
+            } else {
+                showAlert('danger', 'Failed to test Tesseract: ' + response.error);
+            }
+        })
+        .fail(function() {
+            showAlert('danger', 'Failed to test Tesseract installation');
+        });
+}
+
+function testAllComponents() {
+    showLoading('Testing all components...');
+    
+    $.get('/api/test-components')
+        .done(function(response) {
+            if (response.success) {
+                displayAllTestResults(response.test_results);
+                $('#testResultsModal').modal('show');
+            } else {
+                showAlert('danger', 'Failed to test components: ' + response.error);
+            }
+        })
+        .fail(function() {
+            showAlert('danger', 'Failed to test components');
+        });
+}
+
+function displayAllTestResults(results) {
+    let html = '<div class="row">';
+    
+    for (let component in results) {
+        let status = results[component];
+        let isWorking = status.available || status.connected || status.success;
+        let statusIcon = isWorking ? 
+            '<i class="bi bi-check-circle-fill text-success"></i>' : 
+            '<i class="bi bi-x-circle-fill text-danger"></i>';
+        
+        let details = '';
+        if (status.version) details += `Version: ${status.version}<br>`;
+        if (status.cluster_name) details += `Cluster: ${status.cluster_name}<br>`;
+        if (status.description) details += status.description;
+        if (status.error) details += `<span class="text-danger">Error: ${status.error}</span>`;
+        
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">${statusIcon} ${component.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</h6>
+                        <div class="card-text">
+                            ${details || 'OK'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#test-results-content').html(html);
+}
+
+function viewLogs() {
+    // This would open a log viewer
+    showAlert('info', 'Log viewer would be implemented here');
+}
+
+function clearCache() {
+    if (confirm('Are you sure you want to clear the cache? This will remove temporary processing files.')) {
+        showAlert('info', 'Cache clearing would be implemented here');
+    }
+}
+
+function showLoading(message) {
+    showAlert('info', `<div class="d-flex align-items-center"><div class="spinner-border spinner-border-sm me-2" role="status"></div>${message}</div>`);
+}
+
+function showAlert(type, message) {
+    // Remove existing alerts
+    $('.alert').not('.alert-permanent').remove();
+    
+    let alert = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('main .container').prepend(alert);
+    
+    // Auto-dismiss info alerts after 3 seconds
+    if (type === 'info') {
+        setTimeout(function() {
+            $('.alert-info').alert('close');
+        }, 3000);
+    }
+}
+</script>
+{% endblock %}
